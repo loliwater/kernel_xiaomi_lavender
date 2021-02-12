@@ -138,6 +138,7 @@ fw-shipped-$(CONFIG_YAM) += yam/1200.bin yam/9600.bin
 
 fw-shipped-$(CONFIG_TOUCHSCREEN_NVT_F7A) += novatek/tianma_nt36672a_miui_f7a.bin
 fw-shipped-$(CONFIG_TOUCHSCREEN_NVT_F7A) += novatek/shenchao_nt36672a_miui_f7a.bin
+fw-shipped-$(CONFIG_TOUCHSCREEN_NVT_F7A) += novatek/shenchao_2nd_nt36672a_miui_f7a.bin
 fw-shipped-$(CONFIG_TOUCHSCREEN_SYNAPTICS_TCM_REFLASH) += synaptics/boe_td4320_i2c_F7A.img
 fw-shipped-all := $(fw-shipped-y) $(fw-shipped-m) $(fw-shipped-)
 
