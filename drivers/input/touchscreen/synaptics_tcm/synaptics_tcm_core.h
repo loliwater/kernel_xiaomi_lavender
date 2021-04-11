@@ -2,6 +2,7 @@
  * Synaptics TCM touchscreen driver
  *
  * Copyright (C) 2017-2018 Synaptics Incorporated. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * Copyright (C) 2017-2018 Scott Lin <scott.lin@tw.synaptics.com>
  *
@@ -73,7 +74,7 @@
 #define LOGW(dev, log, ...) LOGy(dev_warn, dev, log, ##__VA_ARGS__)
 #define LOGE(dev, log, ...) LOGy(dev_err, dev, log, ##__VA_ARGS__)
 
-
+//wanghan add
 
 #if 1
 #define LOGV(log, ...) \
@@ -92,7 +93,7 @@
 #define LOG_DONE() {}
 #endif
 
-
+//wanghan end
 
 #define INIT_BUFFER(buffer, is_clone) \
 	mutex_init(&buffer.buf_mutex); \

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 - 2017 Novatek, Inc.
- * Copyright (C) 2019 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * $Revision: 22429 $
  * $Date: 2018-01-30 19:42:59 +0800 (周二, 30 一月 2018) $
@@ -32,18 +32,25 @@
 
 #define NVT_DEBUG 1
 
+//---Touch Vendor ID---
+#define TP_VENDOR_UNKNOW    0x00
+#define TP_VENDOR_TIANMA    0x01
+#define TP_VENDOR_BOE       0x02
+#define TP_VENDOR_EBBG      0x03
+#define TP_VENDOR_EBBG_2ND  0x04
 
+//---GPIO number---
 #define NVTTOUCH_RST_PIN 66
 #define NVTTOUCH_INT_PIN 67
 
 
-
-
-
+//---INT trigger mode---
+//#define IRQ_TYPE_EDGE_RISING 1
+//#define IRQ_TYPE_EDGE_FALLING 2
 #define INT_TRIGGER_TYPE IRQ_TYPE_EDGE_RISING
 
 
-
+//---I2C driver info.---
 #define NVT_I2C_NAME "NVT-ts"
 #define I2C_BLDR_Address 0x01
 #define I2C_FW_Address 0x01
@@ -55,7 +62,7 @@
 #define NVT_LOG(fmt, args...)    pr_info("[%s] %s %d: " fmt, NVT_I2C_NAME, __func__, __LINE__, ##args)
 #endif
 #define NVT_ERR(fmt, args...)    pr_err("[%s] %s %d: " fmt, NVT_I2C_NAME, __func__, __LINE__, ##args)
-
+//wanghan add
 #if 1
 #define LOGV(log, ...) \
         printk("[%s] %s (line %d): " log, NVT_I2C_NAME, __func__, __LINE__, ##__VA_ARGS__)
@@ -72,13 +79,13 @@
 #define LOG_ENTRY() {}
 #define LOG_DONE() {}
 #endif
+//wanghan end
 
-
-
+//---Input device info.---
 #define NVT_TS_NAME "NVTCapacitiveTouchScreen"
 
 
-
+//---Touch info.---
 #define TOUCH_DEFAULT_MAX_WIDTH 1080
 #define TOUCH_DEFAULT_MAX_HEIGHT 2340
 #define TOUCH_MAX_FINGER_NUM 10
@@ -91,7 +98,7 @@ extern const uint16_t touch_key_array[TOUCH_KEY_NUM];
 /* Enable only when module have tp reset pin and connected to host */
 #define NVT_TOUCH_SUPPORT_HW_RST 0
 
-
+//---Customerized func.---
 #define NVT_TOUCH_PROC 1
 #define NVT_TOUCH_EXT_PROC 1
 #define NVT_TOUCH_MP 1
@@ -103,16 +110,16 @@ extern const uint16_t gesture_key_array[];
 #define BOOT_UPDATE_FIRMWARE 1
 /* add by yangjiangzhu compatible to shenchao and tianma TP FW  2018/3/16  start */
 #define BOOT_UPDATE_FIRMWARE_NAME_TIANMA "novatek/tianma_nt36672a_miui_f7a.bin"
-#define BOOT_UPDATE_FIRMWARE_NAME_TIANMA_GG5 "novatek/tianma_nt36672a_miui_f7a.bin"
 #define BOOT_UPDATE_FIRMWARE_NAME_SHENCHAO "novatek/shenchao_nt36672a_miui_f7a.bin"
+#define BOOT_UPDATE_FIRMWARE_NAME_SHENCHAO_2ND "novatek/shenchao_2nd_nt36672a_miui_f7a.bin"
 /* add by yangjiangzhu compatible to shenchao and tianma TP FW  2018/3/16  end */
 
 
-
+//---ESD Protect.---
 #define NVT_TOUCH_ESD_PROTECT 1
 #define NVT_TOUCH_ESD_CHECK_PERIOD 1500	/* ms */
 
-
+//---Touch state.---
 #define TOUCH_STATE_WORKING    0x00
 #define TOUCH_STATE_UPGRADING  0x01
 
@@ -129,6 +136,7 @@ struct nvt_ts_data {
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
 	struct early_suspend early_suspend;
 #endif
+	uint8_t touch_vendor_id;
 	struct regulator *vcc_i2c;
 	uint8_t fw_ver;
 	uint8_t x_num;
@@ -157,10 +165,10 @@ struct nvt_flash_data{
 #endif
 
 typedef enum {
-	RESET_STATE_INIT = 0xA0,
-	RESET_STATE_REK,
-	RESET_STATE_REK_FINISH,
-	RESET_STATE_NORMAL_RUN,
+	RESET_STATE_INIT = 0xA0,// IC reset
+	RESET_STATE_REK,		// ReK baseline
+	RESET_STATE_REK_FINISH,	// baseline is ready
+	RESET_STATE_NORMAL_RUN,	// normal run
 	RESET_STATE_MAX  = 0xAF
 } RST_COMPLETE_STATE;
 
@@ -172,10 +180,10 @@ typedef enum {
     EVENT_MAP_PROJECTID                     = 0x9A,
 } I2C_EVENT_MAP;
 
-
+//---extern structures---
 extern struct nvt_ts_data *ts;
 
-
+//---extern functions---
 extern int32_t CTP_I2C_READ(struct i2c_client *client, uint16_t address, uint8_t *buf, uint16_t len);
 extern int32_t CTP_I2C_WRITE(struct i2c_client *client, uint16_t address, uint8_t *buf, uint16_t len);
 extern void nvt_bootloader_reset(void);

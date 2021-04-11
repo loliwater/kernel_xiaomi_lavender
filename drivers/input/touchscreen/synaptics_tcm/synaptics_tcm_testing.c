@@ -2,6 +2,7 @@
  * Synaptics TCM touchscreen driver
  *
  * Copyright (C) 2017-2018 Synaptics Incorporated. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * Copyright (C) 2017-2018 Scott Lin <scott.lin@tw.synaptics.com>
  *
@@ -769,7 +770,7 @@ static int testing_dynamic_range_doze(void)
 				LOGE(tcm_hcd->pdev->dev.parent,
 						"ERR: data[%d][%d]=%d ,lim_h=%d,lim_l=%d\n",
 						row, col, data, drt_hi_limits[row][col], drt_lo_limits[row][col]);
-
+				//break;
 			}
 			idx++;
 		}
@@ -869,8 +870,8 @@ static int testing_dynamic_range(void)
 		goto exit;
 	}
 
-	limits_rows = sizeof(drt_hi_limits) / sizeof(drt_hi_limits[0]);
-	limits_cols = sizeof(drt_hi_limits[0]) / sizeof(drt_hi_limits[0][0]);
+	limits_rows = sizeof(drt_hi_limits) / sizeof(drt_hi_limits[0]);//18
+	limits_cols = sizeof(drt_hi_limits[0]) / sizeof(drt_hi_limits[0][0]);//36
 
 	if (rows > limits_rows || cols > limits_cols) {
 		LOGE(tcm_hcd->pdev->dev.parent,
@@ -902,7 +903,7 @@ static int testing_dynamic_range(void)
 			if (data > drt_hi_limits[row][col] ||
 					data < drt_lo_limits[row][col]) {
 				testing_hcd->result = false;
-
+				//break;
 				printk("\n");
 				LOGE(tcm_hcd->pdev->dev.parent,
 						"ERR: data[%d][%d]=%d ,lim_h=%d,lim_l=%d\n",
@@ -1122,7 +1123,7 @@ static int testing_noise(void)
 			data = (short)le2_to_uint(&buf[idx * 2]);
 			if (data > noise_limits[row][col]) {
 				testing_hcd->result = false;
-
+				//break;
 				printk("\n");
 				LOGE(tcm_hcd->pdev->dev.parent,
 						"ERR: data[%d][%d]=%d ,lim=%d\n",
@@ -1398,7 +1399,7 @@ static int testing_pt11(void)
 			if (data > pt11_hi_limits[row][col] ||
 					data < pt11_lo_limits[row][col]) {
 				testing_hcd->result = false;
-
+				//break;
 				printk("\n");
 				LOGE(tcm_hcd->pdev->dev.parent,
 						"ERR: data[%d][%d]=%d ,lim_h=%d,lim_l=%d\n",
@@ -1913,11 +1914,11 @@ int lct_syna_tp_selftest(unsigned char cmd)
 	bool drt_result, pt11_result;
 	struct syna_tcm_hcd *tcm_hcd = testing_hcd->tcm_hcd;
 
-
+	//init result flag
 	drt_result = true;
 	pt11_result = true;
 
-
+	//test drt
 	mutex_lock(&tcm_hcd->extif_mutex);
 	retval = testing_dynamic_range();
 	mutex_unlock(&tcm_hcd->extif_mutex);
@@ -1930,11 +1931,11 @@ int lct_syna_tp_selftest(unsigned char cmd)
 		drt_result = false;
 	}
 
-
+	//delay
 	LOGV("Delay 1000ms\n");
 	msleep(1000);
 
-
+	//test pt11
 	mutex_lock(&tcm_hcd->extif_mutex);
 	retval = testing_pt11();
 	mutex_unlock(&tcm_hcd->extif_mutex);
@@ -1956,7 +1957,7 @@ int lct_syna_tp_selftest(unsigned char cmd)
 	else if (cmd == TP_SELFTEST_CMD_XIAOMI_SHORT)
 		goto xiaomi_short;
 	else
-		return 0;
+		return 0;//unknow
 
 Longcheer_mmi:
 xiaomi_i2c:
@@ -1980,7 +1981,7 @@ xiaomi_short:
 
 static int32_t lct_syna_save_rawdata_to_csv(unsigned char *buf, uint8_t x_ch, uint8_t y_ch, const char *file_path, uint32_t offset)
 {
-	int retval, data;
+	int retval,data;
 	loff_t pos = 0;
 	char *fbufp = NULL;
 	mm_segment_t org_fs;
@@ -2001,7 +2002,7 @@ static int32_t lct_syna_save_rawdata_to_csv(unsigned char *buf, uint8_t x_ch, ui
 			data = (short)le2_to_uint(&buf[iArrayIndex * 2]);
 			sprintf(fbufp + iArrayIndex * 7 + y * 2, "%5d, ", data);
 		}
-		sprintf(fbufp + (iArrayIndex + 1) * 7 + y * 2, "\r\n");
+		sprintf(fbufp + (iArrayIndex + 1) * 7 + y * 2,"\r\n");
 	}
 
 	org_fs = get_fs();

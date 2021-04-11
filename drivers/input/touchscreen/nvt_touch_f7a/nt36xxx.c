@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 - 2017 Novatek, Inc.
- * Copyright (C) 2019 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * $Revision: 23175 $
  * $Date: 2018-02-12 16:26:21 +0800 (周一, 12 二月 2018) $
@@ -76,7 +76,7 @@ extern int32_t nvt_mp_proc_init(void);
 
 struct nvt_ts_data *ts;
 
-
+//F7A Novatek touch usb pulgin work
 struct g_nvt_data {
 	bool valid;
 	bool usb_plugin;
@@ -120,28 +120,28 @@ const uint16_t touch_key_array[TOUCH_KEY_NUM] = {
 
 #if WAKEUP_GESTURE
 const uint16_t gesture_key_array[] = {
-	KEY_WAKEUP,
-	KEY_WAKEUP,
-	KEY_WAKEUP,
-	KEY_WAKEUP,
-	KEY_WAKEUP,
-	KEY_WAKEUP,
-	KEY_WAKEUP,
-	KEY_WAKEUP,
-	KEY_WAKEUP,
-	KEY_WAKEUP,
-	KEY_WAKEUP,
-	KEY_WAKEUP,
-	KEY_WAKEUP,
+	KEY_WAKEUP,  //GESTURE_WORD_C
+	KEY_WAKEUP,  //GESTURE_WORD_W
+	KEY_WAKEUP,  //GESTURE_WORD_V
+	KEY_WAKEUP,  //GESTURE_DOUBLE_CLICK
+	KEY_WAKEUP,  //GESTURE_WORD_Z
+	KEY_WAKEUP,  //GESTURE_WORD_M
+	KEY_WAKEUP,  //GESTURE_WORD_O
+	KEY_WAKEUP,  //GESTURE_WORD_e
+	KEY_WAKEUP,  //GESTURE_WORD_S
+	KEY_WAKEUP,  //GESTURE_SLIDE_UP
+	KEY_WAKEUP,  //GESTURE_SLIDE_DOWN
+	KEY_WAKEUP,  //GESTURE_SLIDE_LEFT
+	KEY_WAKEUP,  //GESTURE_SLIDE_RIGHT
 };
 
-bool enable_gesture_mode = false;
+bool enable_gesture_mode = false; // for gesture
 EXPORT_SYMBOL(enable_gesture_mode);
 bool delay_gesture = false;
 bool suspend_state = false;
 #define WAKEUP_OFF 4
 #define WAKEUP_ON 5
-#define ENABLE_TOUCH_SZIE 0
+#define ENABLE_TOUCH_SZIE 0//disable touch size report
 
 int nvt_gesture_switch(struct input_dev *dev, unsigned int type, unsigned int code, int value)
 {
@@ -259,7 +259,7 @@ void nvt_sw_reset_idle(void)
 	uint8_t buf[4]={0};
 
 	LOG_ENTRY();
-
+	//---write i2c cmds to reset idle---
 	buf[0]=0x00;
 	buf[1]=0xA5;
 	CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 2);
@@ -285,7 +285,7 @@ void nvt_bootloader_reset(void)
 	buf[1] = 0x69;
 	CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 2);
 
-
+	// need 35ms delay after bootloader reset
 	msleep(35);
 	LOG_DONE();
 }
@@ -305,18 +305,18 @@ int32_t nvt_clear_fw_status(void)
 
 	LOG_ENTRY();
 	for (i = 0; i < retry; i++) {
-
+		//---set xdata index to EVENT BUF ADDR---
 		buf[0] = 0xFF;
 		buf[1] = (ts->mmap->EVENT_BUF_ADDR >> 16) & 0xFF;
 		buf[2] = (ts->mmap->EVENT_BUF_ADDR >> 8) & 0xFF;
 		CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 3);
 
-
+		//---clear fw status---
 		buf[0] = EVENT_MAP_HANDSHAKING_or_SUB_CMD_BYTE;
 		buf[1] = 0x00;
 		CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 2);
 
-
+		//---read fw status---
 		buf[0] = EVENT_MAP_HANDSHAKING_or_SUB_CMD_BYTE;
 		buf[1] = 0xFF;
 		CTP_I2C_READ(ts->client, I2C_FW_Address, buf, 2);
@@ -352,13 +352,13 @@ int32_t nvt_check_fw_status(void)
 
 	LOG_ENTRY();
 	for (i = 0; i < retry; i++) {
-
+		//---set xdata index to EVENT BUF ADDR---
 		buf[0] = 0xFF;
 		buf[1] = (ts->mmap->EVENT_BUF_ADDR >> 16) & 0xFF;
 		buf[2] = (ts->mmap->EVENT_BUF_ADDR >> 8) & 0xFF;
 		CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 3);
 
-
+		//---read fw status---
 		buf[0] = EVENT_MAP_HANDSHAKING_or_SUB_CMD_BYTE;
 		buf[1] = 0x00;
 		CTP_I2C_READ(ts->client, I2C_FW_Address, buf, 2);
@@ -432,13 +432,13 @@ int32_t nvt_read_pid(void)
 	int32_t ret = 0;
 
 	LOG_ENTRY();
-
+	//---set xdata index to EVENT BUF ADDR---
 	buf[0] = 0xFF;
 	buf[1] = (ts->mmap->EVENT_BUF_ADDR >> 16) & 0xFF;
 	buf[2] = (ts->mmap->EVENT_BUF_ADDR >> 8) & 0xFF;
 	CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 3);
 
-
+	//---read project id---
 	buf[0] = EVENT_MAP_PROJECTID;
 	buf[1] = 0x00;
 	buf[2] = 0x00;
@@ -468,13 +468,13 @@ int32_t nvt_get_fw_info(void)
 
 	LOG_ENTRY();
 info_retry:
-
+	//---set xdata index to EVENT BUF ADDR---
 	buf[0] = 0xFF;
 	buf[1] = (ts->mmap->EVENT_BUF_ADDR >> 16) & 0xFF;
 	buf[2] = (ts->mmap->EVENT_BUF_ADDR >> 8) & 0xFF;
 	CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 3);
 
-
+	//---read fw info---
 	buf[0] = EVENT_MAP_FWINFO;
 	CTP_I2C_READ(ts->client, I2C_FW_Address, buf, 17);
 	ts->fw_ver = buf[1];
@@ -484,7 +484,7 @@ info_retry:
 	ts->abs_y_max = (uint16_t)((buf[7] << 8) | buf[8]);
 	ts->max_button_num = buf[11];
 
-
+	//---clear x_num, y_num if fw info is broken---
 	if ((buf[1] + buf[2]) != 0xFF) {
 		NVT_ERR("FW info is broken! fw_ver=0x%02X, ~fw_ver=0x%02X\n", buf[1], buf[2]);
 		ts->fw_ver = 0;
@@ -508,7 +508,7 @@ info_retry:
 	} else {
 		ret = 0;
 	}
-
+	//---Get Novatek PID---
 	nvt_read_pid();
 
 	LOG_DONE();
@@ -558,7 +558,7 @@ static ssize_t nvt_flash_read(struct file *file, char __user *buff, size_t count
 
 	i2c_wr = str[0] >> 7;
 
-	if (i2c_wr == 0) {
+	if (i2c_wr == 0) {	//I2C write
 		while (retries < 20) {
 			ret = CTP_I2C_WRITE(ts->client, (str[0] & 0x7F), &str[2], str[1]);
 			if (ret == 1)
@@ -575,7 +575,7 @@ static ssize_t nvt_flash_read(struct file *file, char __user *buff, size_t count
 		}
 
 		return ret;
-	} else if (i2c_wr == 1) {
+	} else if (i2c_wr == 1) {	//I2C read
 		while (retries < 20) {
 			ret = CTP_I2C_READ(ts->client, (str[0] & 0x7F), &str[2], str[1]);
 			if (ret == 2)
@@ -586,7 +586,7 @@ static ssize_t nvt_flash_read(struct file *file, char __user *buff, size_t count
 			retries++;
 		}
 
-
+		// copy buff to user if i2c transfer
 		if (retries < 20) {
 			if (copy_to_user(buff, str, count))
 				return -EFAULT;
@@ -665,7 +665,7 @@ Executive outcomes. 0---succeed. -12---failed.
 static int32_t nvt_flash_proc_init(void)
 {
 	LOG_ENTRY();
-	NVT_proc_entry = proc_create(DEVICE_NAME, 0444, NULL, &nvt_flash_fops);
+	NVT_proc_entry = proc_create(DEVICE_NAME, 0444, NULL,&nvt_flash_fops);
 	if (NVT_proc_entry == NULL) {
 		NVT_ERR("Failed!\n");
 		return -ENOMEM;
@@ -908,7 +908,7 @@ static void nvt_esd_check_func(struct work_struct *work)
 	unsigned int timer = jiffies_to_msecs(jiffies - irq_timer);
 
 	LOG_ENTRY();
-
+	//NVT_ERR("esd_check = %d (retry %d/%d)\n", esd_check, esd_retry, esd_retry_max);	//DEBUG
 
 	if (esd_retry >= esd_retry_max)
 		nvt_esd_check_enable(false);
@@ -994,7 +994,7 @@ static void nvt_ts_work_func(struct work_struct *work)
 		if ((input_id == 0) || (input_id > ts->max_touch_num))
 			continue;
 
-		if (((point_data[position] & 0x07) == 0x01) || ((point_data[position] & 0x07) == 0x02)) {
+		if (((point_data[position] & 0x07) == 0x01) || ((point_data[position] & 0x07) == 0x02)) {	//finger down (enter & moving)
 #if NVT_TOUCH_ESD_PROTECT
 			/* update interrupt timer */
 			irq_timer = jiffies;
@@ -1112,7 +1112,7 @@ static void nvt_ts_usb_plugin_work_func(struct work_struct *work)
 
 	msleep(35);
 
-
+	//---set xdata index to EVENT BUF ADDR---
 	buf[0] = 0xFF;
 	buf[1] = (ts->mmap->EVENT_BUF_ADDR >> 16) & 0xFF;
 	buf[2] = (ts->mmap->EVENT_BUF_ADDR >> 8) & 0xFF;
@@ -1124,9 +1124,9 @@ static void nvt_ts_usb_plugin_work_func(struct work_struct *work)
 
 	buf[0] = EVENT_MAP_HOST_CMD;
 	if (g_nvt.usb_plugin)
-		buf[1] = 0x53;
+		buf[1] = 0x53;// power plug ac on
 	else
-		buf[1] = 0x51;
+		buf[1] = 0x51;// power plug off
 
 	ret = CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 2);
 	if (ret < 0) {
@@ -1177,30 +1177,30 @@ void nvt_stop_crc_reboot(void)
 	int32_t retry = 0;
 
 	LOG_ENTRY();
+	//read dummy buffer to check CRC fail reboot is happening or not
 
-
-
+	//---change I2C index to prevent geting 0xFF, but not 0xFC---
 	buf[0] = 0xFF;
 	buf[1] = 0x01;
 	buf[2] = 0xF6;
 	CTP_I2C_WRITE(ts->client, I2C_BLDR_Address, buf, 3);
 
-
+	//---read to check if buf is 0xFC which means IC is in CRC reboot ---
 	buf[0] = 0x4E;
 	CTP_I2C_READ(ts->client, I2C_BLDR_Address, buf, 4);
 
 	if ((buf[1] == 0xFC) ||
 			((buf[1] == 0xFF) && (buf[2] == 0xFF) && (buf[3] == 0xFF))) {
 
-
+		//IC is in CRC fail reboot loop, needs to be stopped!
 		for (retry = 5; retry > 0; retry--) {
 
-
+			//---write i2c cmds to reset idle : 1st---
 			buf[0]=0x00;
 			buf[1]=0xA5;
 			CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 2);
 
-
+			//---write i2c cmds to reset idle : 2rd---
 			buf[0]=0x00;
 			buf[1]=0xA5;
 			CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 2);
@@ -1216,7 +1216,7 @@ void nvt_stop_crc_reboot(void)
 			buf[1] = 0xA5;
 			CTP_I2C_WRITE(ts->client, I2C_BLDR_Address, buf, 2);
 
-
+			//---check CRC_ERR_FLAG---
 			buf[0] = 0xFF;
 			buf[1] = 0x03;
 			buf[2] = 0xF1;
@@ -1254,9 +1254,9 @@ static int8_t nvt_ts_check_chip_ver_trim(void)
 	int32_t ret = -1;
 
 	LOG_ENTRY();
-	nvt_bootloader_reset();
+	nvt_bootloader_reset(); // NOT in retry loop
 
-
+	//---Check for 5 times---
 	for (retry = 5; retry > 0; retry--) {
 		nvt_sw_reset_idle();
 
@@ -1281,18 +1281,18 @@ static int8_t nvt_ts_check_chip_ver_trim(void)
 		NVT_LOG("buf[1]=0x%02X, buf[2]=0x%02X, buf[3]=0x%02X, buf[4]=0x%02X, buf[5]=0x%02X, buf[6]=0x%02X\n",
 				buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
 
-
+		//---Stop CRC check to prevent IC auto reboot---
 		if ((buf[1] == 0xFC) ||
 				((buf[1] == 0xFF) && (buf[2] == 0xFF) && (buf[3] == 0xFF))) {
 			nvt_stop_crc_reboot();
 			continue;
 		}
 
-
+		// compare read chip id on supported list
 		for (list = 0; list < (sizeof(trim_id_table) / sizeof(struct nvt_ts_trim_id_table)); list++) {
 			found_nvt_chip = 0;
 
-
+			// compare each byte
 			for (i = 0; i < NVT_ID_BYTE_MAX; i++) {
 				if (trim_id_table[list].mask[i]) {
 					if (buf[i + 1] != trim_id_table[list].id[i])
@@ -1350,24 +1350,24 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	ts->client = client;
 	i2c_set_clientdata(client, ts);
 
-
+	//---parse dts---
 	nvt_parse_dt(&client->dev);
 
-
+	//---request and config GPIOs---
 	ret = nvt_gpio_config(ts);
 	if (ret) {
 		NVT_ERR("gpio config error!\n");
 		goto err_gpio_config_failed;
 	}
 
-
+	//---check i2c func.---
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		NVT_ERR("i2c_check_functionality failed. (no I2C_FUNC_I2C)\n");
 		ret = -ENODEV;
 		goto err_check_functionality_failed;
 	}
 
-
+	// need 10ms delay after POR(power on reset)
 	msleep(10);
 
 	//---check chip version trim---
@@ -1387,7 +1387,7 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	nvt_get_fw_info();
 	mutex_unlock(&ts->lock);
 
-
+	//---create workqueue---
 	nvt_wq = create_workqueue("nvt_wq");
 	if (!nvt_wq) {
 		NVT_ERR("nvt_wq create workqueue failed\n");
@@ -1397,7 +1397,7 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	INIT_WORK(&ts->nvt_work, nvt_ts_work_func);
 	INIT_WORK(&g_nvt.nvt_usb_plugin_work, nvt_ts_usb_plugin_work_func);
 
-
+	//---allocate input device---
 	ts->input_dev = input_allocate_device();
 	if (ts->input_dev == NULL) {
 		NVT_ERR("allocate input device failed\n");
@@ -1414,7 +1414,7 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	ts->int_trigger_type = INT_TRIGGER_TYPE;
 
 
-
+	//---set input device info.---
 	ts->input_dev->evbit[0] = BIT_MASK(EV_SYN) | BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS) ;
 	ts->input_dev->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH);
 	ts->input_dev->propbit[0] = BIT(INPUT_PROP_DIRECT);
@@ -1423,20 +1423,20 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	input_mt_init_slots(ts->input_dev, ts->max_touch_num, 0);
 #endif
 
-	input_set_abs_params(ts->input_dev, ABS_MT_PRESSURE, 0, TOUCH_FORCE_NUM, 0, 0);
+	input_set_abs_params(ts->input_dev, ABS_MT_PRESSURE, 0, TOUCH_FORCE_NUM, 0, 0);    //pressure = TOUCH_FORCE_NUM
 
 #if TOUCH_MAX_FINGER_NUM > 1
 #if ENABLE_TOUCH_SZIE
-	input_set_abs_params(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
+	input_set_abs_params(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);    //area = 255
 #endif
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, 0, ts->abs_x_max-1, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, 0, ts->abs_y_max-1, 0, 0);
 #if MT_PROTOCOL_B
-
+	// no need to set ABS_MT_TRACKING_ID, input_mt_init_slots() already set it
 #else
 	input_set_abs_params(ts->input_dev, ABS_MT_TRACKING_ID, 0, ts->max_touch_num, 0, 0);
-#endif
-#endif
+#endif //MT_PROTOCOL_B
+#endif //TOUCH_MAX_FINGER_NUM > 1
 
 #if TOUCH_KEY_NUM > 0
 	for (retry = 0; retry < ts->max_button_num; retry++) {
@@ -1457,14 +1457,14 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	ts->input_dev->phys = ts->phys;
 	ts->input_dev->id.bustype = BUS_I2C;
 
-
+	//---register input device---
 	ret = input_register_device(ts->input_dev);
 	if (ret) {
 		NVT_ERR("register input device (%s) failed. ret=%d\n", ts->input_dev->name, ret);
 		goto err_input_register_device_failed;
 	}
 
-
+	//---set int-pin & request irq---
 	client->irq = gpio_to_irq(ts->irq_gpio);
 	if (client->irq) {
 		NVT_LOG("int_trigger_type=%d\n", ts->int_trigger_type);
@@ -1491,7 +1491,7 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 		goto err_create_nvt_fwu_wq_failed;
 	}
 	INIT_DELAYED_WORK(&ts->nvt_fwu_work, Boot_Update_Firmware);
-
+	// please make sure boot update start after display reset(RESX) sequence
 	queue_delayed_work(nvt_fwu_wq, &ts->nvt_fwu_work, msecs_to_jiffies(14000));
 #endif
 
@@ -1502,7 +1502,7 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 			msecs_to_jiffies(NVT_TOUCH_ESD_CHECK_PERIOD));
 #endif /* #if NVT_TOUCH_ESD_PROTECT */
 
-
+	//---set device node---
 
 #ifdef CONFIG_KERNEL_CUSTOM_FACTORY
 	ret = init_lct_tp_work(lct_tp_work_node_callback);
@@ -1576,7 +1576,7 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 
 	enable_irq(client->irq);
 
-
+	//set novatek touch drver global value;
 	g_nvt.valid = true;
 	g_nvt.usb_plugin = false;
 
@@ -1620,7 +1620,7 @@ Executive outcomes. 0---succeed.
  *******************************************************/
 static int32_t nvt_ts_remove(struct i2c_client *client)
 {
-
+	//struct nvt_ts_data *ts = i2c_get_clientdata(client);
 
 	LOG_ENTRY();
 #if defined(CONFIG_FB)
@@ -1679,11 +1679,11 @@ static int32_t nvt_ts_suspend(struct device *dev)
 	nvt_esd_check_enable(false);
 #endif /* #if NVT_TOUCH_ESD_PROTECT */
 
-	if (enable_gesture_mode) {
-
+	if (enable_gesture_mode) { // Gesture Mode
+		//---write i2c command to enter "wakeup gesture mode"---
 		buf[0] = EVENT_MAP_HOST_CMD;
 		buf[1] = 0x13;
-#if 0
+#if 0 // Do not set 0xFF first, ToDo
 		buf[2] = 0xFF;
 		buf[3] = 0xFF;
 		CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 4);
@@ -1694,10 +1694,10 @@ static int32_t nvt_ts_suspend(struct device *dev)
 		enable_irq_wake(ts->client->irq);
 
 		NVT_LOG("Enabled touch wakeup gesture\n");
-	} else {
+	} else { // Normal Mode
 		disable_irq(ts->client->irq);
 
-
+		//---write i2c command to enter "deep sleep mode"---
 		buf[0] = EVENT_MAP_HOST_CMD;
 		buf[1] = 0x11;
 		CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 2);
@@ -1750,7 +1750,7 @@ static int32_t nvt_ts_resume(struct device *dev)
 
 	NVT_LOG("start\n");
 
-
+	// please make sure display reset(RESX) sequence and mipi dsi cmds sent before this
 #if NVT_TOUCH_SUPPORT_HW_RST
 	gpio_set_value(ts->reset_gpio, 1);
 #endif
@@ -1815,11 +1815,11 @@ static int lct_tp_work_node_callback(bool flag)
 		return -1;
 	}
 	if (suspend_state) return 0;
-	if (flag) {
+	if (flag) {// enable(resume) tp
 		suspend_state = true;
 		ret = nvt_ts_resume(&ts->client->dev);
 		if (ret < 0) NVT_ERR("nvt_ts_resume faild! ret=%d\n", ret);
-	} else {
+	} else {// disbale(suspend) tp
 		ret = nvt_ts_suspend(&ts->client->dev);
 		if (ret < 0) NVT_ERR("nvt_ts_suspend faild! ret=%d\n", ret);
 	}
@@ -1864,7 +1864,7 @@ static int lct_tp_get_screen_angle_callback(void)
 	NVT_LOG("++\n");
 
 	mutex_lock(&ts->lock);
-
+	// Why go to sleep? Ask to FAE.
 	msleep(35);
 
 	tmp[0] = 0xFF;
@@ -2036,8 +2036,8 @@ static struct of_device_id nvt_match_table[] = {
 static struct i2c_driver nvt_i2c_driver = {
 	.probe		= nvt_ts_probe,
 	.remove		= nvt_ts_remove,
-
-
+	//	.suspend	= nvt_ts_suspend,
+	//	.resume		= nvt_ts_resume,
 	.id_table	= nvt_ts_id,
 	.driver = {
 		.name	= NVT_I2C_NAME,
@@ -2053,7 +2053,7 @@ static struct i2c_driver nvt_i2c_driver = {
 	},
 };
 
-
+//doesn't support charging in shutdown mode
 #define DOES_NOT_SUPPORT_SHUTDOWN_CHARGING
 
 #ifdef DOES_NOT_SUPPORT_SHUTDOWN_CHARGING
@@ -2074,7 +2074,7 @@ static int32_t __init nvt_driver_init(void)
 	LOG_ENTRY();
 	NVT_LOG("start\n");
 
-
+	//set novatek touch drver global value;
 	g_nvt.valid = false;
 
 #ifdef DOES_NOT_SUPPORT_SHUTDOWN_CHARGING
@@ -2084,14 +2084,14 @@ static int32_t __init nvt_driver_init(void)
 	}
 #endif
 
-
+	//Check TP hardware
 	if (IS_ERR_OR_NULL(g_lcd_id)){
 		NVT_ERR("g_lcd_id is ERROR!\n");
 		goto err;
 	} else {
-		if (strstr(g_lcd_id, "tianma nt36672a") != NULL) {
+		if (strstr(g_lcd_id,"tianma nt36672a") != NULL) {
 			NVT_LOG("TP info: [Vendor]tianma [IC]nt36672a\n");
-		} else if (strstr(g_lcd_id, "shenchao nt36672a") != NULL) {
+		} else if (strstr(g_lcd_id,"shenchao nt36672a") != NULL) {
 			NVT_LOG("TP info: [Vendor]shenchao [IC] nt36672a\n");
 		} else {
 			NVT_ERR("Touch IC is not nt36672a\n");
@@ -2099,7 +2099,7 @@ static int32_t __init nvt_driver_init(void)
 		}
 	}
 
-
+	//---add i2c driver---
 	ret = i2c_add_driver(&nvt_i2c_driver);
 	if (ret) {
 		pr_err("%s: failed to add i2c driver", __func__);
@@ -2144,7 +2144,7 @@ static void __exit nvt_driver_exit(void)
 	LOG_DONE();
 }
 
-
+//late_initcall(nvt_driver_init);
 module_init(nvt_driver_init);
 module_exit(nvt_driver_exit);
 

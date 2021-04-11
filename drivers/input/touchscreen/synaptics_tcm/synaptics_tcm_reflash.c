@@ -2,6 +2,7 @@
  * Synaptics TCM touchscreen driver
  *
  * Copyright (C) 2017-2018 Synaptics Incorporated. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * Copyright (C) 2017-2018 Scott Lin <scott.lin@tw.synaptics.com>
  *
@@ -1024,18 +1025,18 @@ static enum update_area reflash_compare_id_info(void)
 		goto exit;
 	}
 
-
+	// --- get image id ---
 	image_fw_id = le4_to_uint(header->build_id);
 	device_fw_id = tcm_hcd->packrat_number;
 
-
+	// --- print image id ---
 	LOGV("image_fw_id=0x%02X, device_fw_id=0x%02X\n", image_fw_id, device_fw_id);
 
-
+	// --- get config id ---
 	image_config_id = header->customer_config_id;
 	device_config_id = tcm_hcd->app_info.customer_config_id;
 
-
+	// --- print config id ---
 	memset(buf, 0, sizeof(buf));
 	strncpy(buf, image_config_id, 16);
 	LOGV("image_config_id=%s\n", buf);
@@ -1043,7 +1044,7 @@ static enum update_area reflash_compare_id_info(void)
 	strncpy(buf, device_config_id, 16);
 	LOGV("device_config_id=%s\n", buf);
 
-
+	// --- compare image id ---
 	if (image_fw_id > device_fw_id) {
 		LOGN(tcm_hcd->pdev->dev.parent,
 				"Image firmware ID newer than device firmware ID\n");
@@ -1056,7 +1057,7 @@ static enum update_area reflash_compare_id_info(void)
 		goto exit;
 	}
 
-
+	// --- compare config id ---
 	for (idx = 0; idx < 16; idx++) {
 		if (image_config_id[idx] > device_config_id[idx]) {
 			LOGN(tcm_hcd->pdev->dev.parent,
@@ -2062,14 +2063,15 @@ static int lct_syna_tp_lockdown_info_update(char *buf, struct syna_tcm_hcd *tcm_
 				"Failed to read lockdown data\n");
 		goto exit;
 	}
-	sprintf(buf, "%02x%02x%02x%02x%02x%02x%02x\n",
+	sprintf(buf,"%02x%02x%02x%02x%02x%02x%02x%02x\n",
 			(uint8_t)(reflash_hcd->read.buf[0]),
 			(uint8_t)(reflash_hcd->read.buf[1]),
 			(uint8_t)(reflash_hcd->read.buf[2]),
 			(uint8_t)(reflash_hcd->read.buf[3]),
 			(uint8_t)(reflash_hcd->read.buf[4]),
 			(uint8_t)(reflash_hcd->read.buf[5]),
-			(uint8_t)(reflash_hcd->read.buf[6]));
+			(uint8_t)(reflash_hcd->read.buf[6]),
+			(uint8_t)(reflash_hcd->read.buf[7]));
 	LOGV("get lockdown info : %s\n", buf);
 
 exit:
@@ -2079,7 +2081,7 @@ exit:
 	return 0;
 }
 
-
+//Run only once
 #define LCT_SYNA_TP_LOCKDOWN_CALLBACK_RUN_ONLY_ONCE 1
 
 int lct_syna_tp_callback(const char *cmd)
@@ -2097,7 +2099,7 @@ int lct_syna_tp_callback(const char *cmd)
 	if (run_only_once_flag) return 0;
 #endif
 	if(strcmp(cmd, TP_CALLBACK_CMD_LOCKDOWN))
-		return -1;
+		return -1;// if not TP_CALLBACK_CMD_LOCKDOWN, return -1!
 	memset(tp_lockdown_info_buf, 0, sizeof(tp_lockdown_info_buf));
 	retval = lct_syna_tp_lockdown_info_update(tp_lockdown_info_buf, tcm_hcd);
 	if (retval < 0) {
@@ -2143,9 +2145,9 @@ static int lct_syna_tp_node_init(struct syna_tcm_hcd *tcm_hcd)
 static void reflash_startup_work(struct work_struct *work)
 {
 	int retval;
-
-
-
+	//#ifdef CONFIG_FB
+	//	unsigned int timeout;
+	//#endif
 	struct syna_tcm_hcd *tcm_hcd = reflash_hcd->tcm_hcd;
 
 	LOG_ENTRY();
@@ -2157,23 +2159,19 @@ static void reflash_startup_work(struct work_struct *work)
 	}
 	/* add tp vendor information by wanghan end */
 
-#ifdef CONFIG_KERNEL_CUSTOM_FACTORY
-	LOGV("Close the TP FW upgrade feature in longcheer factory version\n");
-	return;
-#endif
-
-
-
-
-
-
-
-
-
-
-
-
-
+	//#ifdef CONFIG_FB
+	//	timeout = FB_READY_TIMEOUT_S * 1000 / FB_READY_WAIT_MS;
+	//
+	//	while (tcm_hcd->fb_ready != FB_READY_COUNT) {
+	//		if (timeout == 0) {
+	//			LOGE(tcm_hcd->pdev->dev.parent,
+	//					"Timed out waiting for FB ready\n");
+	//			return;
+	//		}
+	//		msleep(FB_READY_WAIT_MS);
+	//		timeout--;
+	//	}
+	//#endif
 
 	pm_stay_awake(&tcm_hcd->pdev->dev);
 

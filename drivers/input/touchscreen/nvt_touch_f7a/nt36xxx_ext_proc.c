@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 - 2017 Novatek, Inc.
- * Copyright (C) 2019 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * $Revision: 20251 $
  * $Date: 2017-12-13 17:41:29 +0800 (周三, 13 十二月 2017) $
@@ -81,13 +81,13 @@ void nvt_change_mode(uint8_t mode)
 	uint8_t buf[8] = {0};
 
 	LOG_ENTRY();
-
+	//---set xdata index to EVENT BUF ADDR---
 	buf[0] = 0xFF;
 	buf[1] = (ts->mmap->EVENT_BUF_ADDR >> 16) & 0xFF;
 	buf[2] = (ts->mmap->EVENT_BUF_ADDR >> 8) & 0xFF;
 	CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 3);
 
-
+	//---set mode---
 	buf[0] = EVENT_MAP_HOST_CMD;
 	buf[1] = mode;
 	CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 2);
@@ -113,18 +113,18 @@ uint8_t nvt_get_fw_pipe(void)
 	uint8_t buf[8]= {0};
 
 	LOG_ENTRY();
-
+	//---set xdata index to EVENT BUF ADDR---
 	buf[0] = 0xFF;
 	buf[1] = (ts->mmap->EVENT_BUF_ADDR >> 16) & 0xFF;
 	buf[2] = (ts->mmap->EVENT_BUF_ADDR >> 8) & 0xFF;
 	CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 3);
 
-
+	//---read fw status---
 	buf[0] = EVENT_MAP_HANDSHAKING_or_SUB_CMD_BYTE;
 	buf[1] = 0x00;
 	CTP_I2C_READ(ts->client, I2C_FW_Address, buf, 2);
 
-
+	//NVT_LOG("FW pipe=%d, buf[1]=0x%02X\n", (buf[1]&0x01), buf[1]);
 
 	LOG_DONE();
 	return (buf[1] & 0x01);
@@ -149,84 +149,84 @@ void nvt_read_mdata(uint32_t xdata_addr, uint32_t xdata_btn_addr)
 	int32_t residual_len = 0;
 
 	LOG_ENTRY();
-
+	//---set xdata sector address & length---
 	head_addr = xdata_addr - (xdata_addr % XDATA_SECTOR_SIZE);
 	dummy_len = xdata_addr - head_addr;
 	data_len = ts->x_num * ts->y_num * 2;
 	residual_len = (head_addr + dummy_len + data_len) % XDATA_SECTOR_SIZE;
 
+	//printk("head_addr=0x%05X, dummy_len=0x%05X, data_len=0x%05X, residual_len=0x%05X\n", head_addr, dummy_len, data_len, residual_len);
 
-
-
+	//read xdata : step 1
 	for (i = 0; i < ((dummy_len + data_len) / XDATA_SECTOR_SIZE); i++) {
-
+		//---change xdata index---
 		buf[0] = 0xFF;
 		buf[1] = ((head_addr + XDATA_SECTOR_SIZE * i) >> 16) & 0xFF;
 		buf[2] = ((head_addr + XDATA_SECTOR_SIZE * i) >> 8) & 0xFF;
 		CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 3);
 
-
+		//---read xdata by I2C_TANSFER_LENGTH
 		for (j = 0; j < (XDATA_SECTOR_SIZE / I2C_TANSFER_LENGTH); j++) {
-
+			//---read data---
 			buf[0] = I2C_TANSFER_LENGTH * j;
 			CTP_I2C_READ(ts->client, I2C_FW_Address, buf, I2C_TANSFER_LENGTH + 1);
 
-
+			//---copy buf to xdata_tmp---
 			for (k = 0; k < I2C_TANSFER_LENGTH; k++) {
 				xdata_tmp[XDATA_SECTOR_SIZE * i + I2C_TANSFER_LENGTH * j + k] = buf[k + 1];
-
+				//printk("0x%02X, 0x%04X\n", buf[k+1], (XDATA_SECTOR_SIZE*i + I2C_TANSFER_LENGTH*j + k));
 			}
 		}
-
+		//printk("addr=0x%05X\n", (head_addr+XDATA_SECTOR_SIZE*i));
 	}
 
-
+	//read xdata : step2
 	if (residual_len != 0) {
-
+		//---change xdata index---
 		buf[0] = 0xFF;
 		buf[1] = ((xdata_addr + data_len - residual_len) >> 16) & 0xFF;
 		buf[2] = ((xdata_addr + data_len - residual_len) >> 8) & 0xFF;
 		CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 3);
 
-
+		//---read xdata by I2C_TANSFER_LENGTH
 		for (j = 0; j < (residual_len / I2C_TANSFER_LENGTH + 1); j++) {
-
+			//---read data---
 			buf[0] = I2C_TANSFER_LENGTH * j;
 			CTP_I2C_READ(ts->client, I2C_FW_Address, buf, I2C_TANSFER_LENGTH + 1);
 
-
+			//---copy buf to xdata_tmp---
 			for (k = 0; k < I2C_TANSFER_LENGTH; k++) {
 				xdata_tmp[(dummy_len + data_len - residual_len) + I2C_TANSFER_LENGTH * j + k] = buf[k + 1];
-
+				//printk("0x%02X, 0x%04x\n", buf[k+1], ((dummy_len+data_len-residual_len) + I2C_TANSFER_LENGTH*j + k));
 			}
 		}
-
+		//printk("addr=0x%05X\n", (xdata_addr+data_len-residual_len));
 	}
 
-
+	//---remove dummy data and 2bytes-to-1data---
 	for (i = 0; i < (data_len / 2); i++) {
 		xdata[i] = (int16_t)(xdata_tmp[dummy_len + i * 2] + 256 * xdata_tmp[dummy_len + i * 2 + 1]);
 	}
 
 #if TOUCH_KEY_NUM > 0
-
-
+	//read button xdata : step3
+	//---change xdata index---
 	buf[0] = 0xFF;
 	buf[1] = (xdata_btn_addr >> 16) & 0xFF;
 	buf[2] = ((xdata_btn_addr >> 8) & 0xFF);
 	CTP_I2C_WRITE(ts->client, I2C_FW_Address, buf, 3);
 
-
+	//---read data---
 	buf[0] = (xdata_btn_addr & 0xFF);
 	CTP_I2C_READ(ts->client, I2C_FW_Address, buf, (TOUCH_KEY_NUM * 2 + 1));
 
-
+	//---2bytes-to-1data---
 	for (i = 0; i < TOUCH_KEY_NUM; i++) {
 		xdata[ts->x_num * ts->y_num + i] = (int16_t)(buf[1 + i * 2] + 256 * buf[1 + i * 2 + 1]);
 	}
 #endif
 
-
+	//---set xdata index to EVENT BUF ADDR---
 	buf[0] = 0xFF;
 	buf[1] = (ts->mmap->EVENT_BUF_ADDR >> 16) & 0xFF;
 	buf[2] = (ts->mmap->EVENT_BUF_ADDR >> 8) & 0xFF;
@@ -637,7 +637,7 @@ static int32_t nvt_get_oem_data(uint8_t *data, uint32_t flash_address, int32_t s
 	LOG_ENTRY();
 	NVT_LOG("++\n");
 
-
+	// maximum 256 bytes each read
 	if (size % 256)
 		count_256 = size / 256 + 1;
 	else
@@ -646,22 +646,22 @@ static int32_t nvt_get_oem_data(uint8_t *data, uint32_t flash_address, int32_t s
 get_oem_data_retry:
 	nvt_sw_reset_idle();
 
-
+	// check and stop crc reboot loop
 	nvt_stop_crc_reboot();
 
-
+	// Step 1: Initial BootLoader
 	ret = Init_BootLoader();
 	if (ret < 0) {
 		goto get_oem_data_out;
 	}
 
-
+	// Step 2: Resume PD
 	ret = Resume_PD();
 	if (ret < 0) {
 		goto get_oem_data_out;
 	}
 
-
+	// Step 3: Unlock
 	buf[0] = 0x00;
 	buf[1] = 0x35;
 	CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 2);
@@ -703,16 +703,16 @@ get_oem_data_retry:
 
 			memcpy(tmp_data + j * 32, buf + 1, 32);
 		}
-
+		// get checksum of the 256 bytes data read
 		checksum_get = (uint16_t)((tmp_data[1] << 8) | tmp_data[0]);
-
+		// calculate checksum of of the 256 bytes data read
 		checksum_cal = (uint16_t)((cur_flash_addr >> 16) & 0xFF) + (uint16_t)((cur_flash_addr >> 8) & 0xFF) + (cur_flash_addr & 0xFF) + 0x00 + 0xFF;
 		for (j = 0; j < 256; j++) {
 			checksum_cal += tmp_data[j + 2];
 		}
 		checksum_cal = 65535 - checksum_cal + 1;
-
-
+		//NVT_LOG("checksum_get = 0x%04X, checksum_cal = 0x%04X\n", checksum_get, checksum_cal);
+		// compare the checksum got and calculated
 		if (checksum_get != checksum_cal) {
 			if (retry < 3) {
 				retry++;
@@ -724,7 +724,7 @@ get_oem_data_retry:
 			}
 		}
 
-
+		// Step 6: Remapping (Remove 2 Bytes Checksum)
 		if ((i + 1) * 256 > size) {
 			memcpy(data + i * 256, tmp_data + 2, size - i * 256);
 		} else {
@@ -732,14 +732,14 @@ get_oem_data_retry:
 		}
 	}
 
-#if 0
+#if 0 // for debug
 	for (i = 0; i < size; i++) {
 		if (i % 16 == 0)
 			printk("\n");
 		printk("%02X ", data[i]);
 	}
 	printk("\n");
-#endif
+#endif // for debug
 
 get_oem_data_out:
 	nvt_bootloader_reset();
@@ -767,7 +767,7 @@ static int update_tp_info(const char *cmd)
 	}
 
 	if(strcmp(cmd, TP_CALLBACK_CMD_INFO))
-		return ret;
+		return ret;// if not TP_CALLBACK_CMD_INFO, return -1!
 
 	if (mutex_lock_interruptible(&ts->lock)) {
 		LOGV("Touch is locking, Update info failed!\n");
@@ -775,7 +775,7 @@ static int update_tp_info(const char *cmd)
 	}
 
 	LOGV("Update TP info\n");
-
+	//write i2c index to EVENT BUF ADDR
 	buf[0] = 0xFF;
 	buf[1] = (ts->mmap->EVENT_BUF_ADDR >> 16) & 0xFF;
 	buf[2] = (ts->mmap->EVENT_BUF_ADDR >> 8) & 0xFF;
@@ -786,7 +786,7 @@ static int update_tp_info(const char *cmd)
 		return ret;
 	}
 
-
+	//read Firmware Version
 	buf[0] = EVENT_MAP_FWINFO;
 	buf[1] = 0x00;
 	buf[2] = 0x00;
@@ -799,14 +799,14 @@ static int update_tp_info(const char *cmd)
 	mutex_unlock(&ts->lock);
 
 	NVT_LOG("IC FW Ver = 0x%02X, FW Ver Bar = 0x%02X\n", buf[1], buf[2]);
-	if (strstr(g_lcd_id, "tianma nt36672a") != NULL) {
+	if (strstr(g_lcd_id,"tianma nt36672a") != NULL) {
 		sprintf(tp_info_buf, "[Vendor]tianma,[FW]0x%02x,[IC]nvt36672a\n", buf[1]);
-	} else if (strstr(g_lcd_id, "shenchao nt36672a") != NULL) {
+	} else if (strstr(g_lcd_id,"shenchao nt36672a") != NULL) {
 		sprintf(tp_info_buf, "[Vendor]shenchao,[FW]0x%02x,[IC]nvt36672a\n", buf[1]);
 	} else {
 		return -ENODEV;
 	}
-	update_lct_tp_info(tp_info_buf, NULL);
+	update_lct_tp_info(tp_info_buf,NULL);
 	return 0;
 }
 
@@ -853,14 +853,20 @@ int lct_nvt_tp_info_node_init(void)
 		return -1;
 	} else {
 		LOGV("LCM information : %s\n", g_lcd_id);
-		if (strstr(g_lcd_id, "tianma nt36672a") != NULL) {
+		if (strstr(g_lcd_id,"tianma nt36672a") != NULL) {
 			sprintf(tp_info_buf, "[Vendor]tianma,[FW]0x%02x,[IC]nvt36672a\n", ts->fw_ver);
+			ts->touch_vendor_id = TP_VENDOR_TIANMA;
 			goto tp_node_init;
-		} else if (strstr(g_lcd_id, "shenchao nt36672a") != NULL) {
+		} else if (strstr(g_lcd_id,"shenchao nt36672a") != NULL) {
 			sprintf(tp_info_buf, "[Vendor]shenchao,[FW]0x%02x,[IC]nvt36672a\n", ts->fw_ver);
+			if (reservation_byte == 0x00)
+				ts->touch_vendor_id = TP_VENDOR_EBBG;
+			else if (reservation_byte == 0x01)
+				ts->touch_vendor_id = TP_VENDOR_EBBG_2ND;
 			goto tp_node_init;
 		} else {
 			init_lct_tp_info(NULL, NULL);
+			ts->touch_vendor_id = TP_VENDOR_UNKNOW;
 			LOG_DONE();
 			return -ENODEV;
 		}
@@ -885,7 +891,7 @@ static int32_t nvt_set_pwr_plug_switch(uint8_t pwr_plug_switch)
 
 	msleep(35);
 
-
+	//---set xdata index to EVENT BUF ADDR---
 	buf[0] = 0xFF;
 	buf[1] = (ts->mmap->EVENT_BUF_ADDR >> 16) & 0xFF;
 	buf[2] = (ts->mmap->EVENT_BUF_ADDR >> 8) & 0xFF;
@@ -897,10 +903,10 @@ static int32_t nvt_set_pwr_plug_switch(uint8_t pwr_plug_switch)
 
 	buf[0] = EVENT_MAP_HOST_CMD;
 	if (pwr_plug_switch == 0) {
-
+		// power plug off
 		buf[1] = 0x51;
 	} else if (pwr_plug_switch == 1) {
-
+		// power plug ac on
 		buf[1] = 0x53;
 	} else {
 		NVT_ERR("Invalid value! pwr_plug_switch = %d\n", pwr_plug_switch);
@@ -927,7 +933,7 @@ static int32_t nvt_get_pwr_plug_switch(uint8_t *pwr_plug_switch)
 
 	msleep(35);
 
-
+	//---set xdata index to EVENT BUF ADDR---
 	buf[0] = 0xFF;
 	buf[1] = (ts->mmap->EVENT_BUF_ADDR >> 16) & 0xFF;
 	buf[2] = (ts->mmap->EVENT_BUF_ADDR >> 8) & 0xFF;
@@ -993,7 +999,7 @@ static ssize_t nvt_pwr_plug_switch_proc_read(struct file *filp, char __user *buf
 	return cnt;
 }
 
-static ssize_t nvt_pwr_plug_switch_proc_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos)
+static ssize_t nvt_pwr_plug_switch_proc_write(struct file *filp,const char __user *buf, size_t count, loff_t *f_pos)
 {
 	int32_t ret;
 	int32_t tmp;
@@ -1066,7 +1072,7 @@ Executive outcomes. 0---succeed. -12---failed.
 int32_t nvt_extra_proc_init(void)
 {
 	LOG_ENTRY();
-	NVT_proc_fw_version_entry = proc_create(NVT_FW_VERSION, 0444, NULL, &nvt_fw_version_fops);
+	NVT_proc_fw_version_entry = proc_create(NVT_FW_VERSION, 0444, NULL,&nvt_fw_version_fops);
 	if (NVT_proc_fw_version_entry == NULL) {
 		NVT_ERR("create proc/nvt_fw_version Failed!\n");
 		return -ENOMEM;
@@ -1074,7 +1080,7 @@ int32_t nvt_extra_proc_init(void)
 		NVT_LOG("create proc/nvt_fw_version Succeeded!\n");
 	}
 
-	NVT_proc_baseline_entry = proc_create(NVT_BASELINE, 0444, NULL, &nvt_baseline_fops);
+	NVT_proc_baseline_entry = proc_create(NVT_BASELINE, 0444, NULL,&nvt_baseline_fops);
 	if (NVT_proc_baseline_entry == NULL) {
 		NVT_ERR("create proc/nvt_baseline Failed!\n");
 		return -ENOMEM;
@@ -1082,7 +1088,7 @@ int32_t nvt_extra_proc_init(void)
 		NVT_LOG("create proc/nvt_baseline Succeeded!\n");
 	}
 
-	NVT_proc_raw_entry = proc_create(NVT_RAW, 0444, NULL, &nvt_raw_fops);
+	NVT_proc_raw_entry = proc_create(NVT_RAW, 0444, NULL,&nvt_raw_fops);
 	if (NVT_proc_raw_entry == NULL) {
 		NVT_ERR("create proc/nvt_raw Failed!\n");
 		return -ENOMEM;
@@ -1090,7 +1096,7 @@ int32_t nvt_extra_proc_init(void)
 		NVT_LOG("create proc/nvt_raw Succeeded!\n");
 	}
 
-	NVT_proc_diff_entry = proc_create(NVT_DIFF, 0444, NULL, &nvt_diff_fops);
+	NVT_proc_diff_entry = proc_create(NVT_DIFF, 0444, NULL,&nvt_diff_fops);
 	if (NVT_proc_diff_entry == NULL) {
 		NVT_ERR("create proc/nvt_diff Failed!\n");
 		return -ENOMEM;
@@ -1098,7 +1104,7 @@ int32_t nvt_extra_proc_init(void)
 		NVT_LOG("create proc/nvt_diff Succeeded!\n");
 	}
 
-	NVT_proc_pwr_plug_switch_entry = proc_create(NVT_PWR_PLUG_SWITCH, 0666, NULL, &nvt_pwr_plug_switch_fops);
+	NVT_proc_pwr_plug_switch_entry = proc_create(NVT_PWR_PLUG_SWITCH, 0666, NULL,&nvt_pwr_plug_switch_fops);
 	if (NVT_proc_pwr_plug_switch_entry == NULL) {
 		NVT_ERR("create proc/nvt_pwr_plug_switch Failed!\n");
 		return -ENOMEM;

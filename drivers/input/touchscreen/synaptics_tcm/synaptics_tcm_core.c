@@ -2,6 +2,7 @@
  * Synaptics TCM touchscreen driver
  *
  * Copyright (C) 2017-2018 Synaptics Incorporated. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * Copyright (C) 2017-2018 Scott Lin <scott.lin@tw.synaptics.com>
  *
@@ -57,15 +58,15 @@ static struct syna_tcm_hcd *g_tcm_hcd;
 /* add resume work by wanghan end */
 
 /* add check F7A_LCM_ID by wanghan start */
-#define F7A_LCM_ID0 0
-#define F7A_LCM_ID1 55
-#define F7A_LCM_ID0_STATE 0
-#define F7A_LCM_ID1_STATE 1
+#define F7A_LCM_ID0 0  //ID0 -> GPIO0;
+#define F7A_LCM_ID1 55 //ID1 -> GPIO55;
+#define F7A_LCM_ID0_STATE 0 //0 tianma/nova, 0 boe/syna;
+#define F7A_LCM_ID1_STATE 1 //0 tianma/nova, 1 boe/syna;
 /* add check F7A_LCM_ID by wanghan start */
 
+//#define RESET_ON_RESUME
 
-
-
+//#define RESUME_EARLY_UNBLANK
 
 #define RESET_ON_RESUME_DELAY_MS 80
 
@@ -73,7 +74,7 @@ static struct syna_tcm_hcd *g_tcm_hcd;
 
 #define MIN_READ_LENGTH 9
 
-
+//#define KEEP_DRIVER_ON_ERROR
 
 #define FORCE_RUN_APPLICATION_FIRMWARE
 
@@ -97,7 +98,7 @@ static struct syna_tcm_hcd *g_tcm_hcd;
 
 #define WATCHDOG_DELAY_MS 1000
 
-#define GLOVE_DELAY_MS ( 60 * 1000 )
+#define GLOVE_DELAY_MS ( 60 * 1000 ) // 1min = 60s = 60 * 1000 ms
 
 #define MODE_SWITCH_DELAY_MS 100
 
@@ -3142,9 +3143,9 @@ static int syna_tcm_fb_notifier_cb(struct notifier_block *nb,
 	LOG_ENTRY();
 	retval = 0;
 
-
+	//LOGV("fb notifier callback\n");
 	if (evdata && evdata->data && tcm_hcd) {
-
+		//LOGV("have an event\n");
 		transition = evdata->data;
 		if (action == FB_EARLY_EVENT_BLANK) {
 			if(*transition == FB_BLANK_POWERDOWN) {
@@ -3161,7 +3162,7 @@ static int syna_tcm_fb_notifier_cb(struct notifier_block *nb,
 				if (retval < 0) LOGV("syna_tcm_early_suspend Failed! retval = %d\n", retval);
 				mutex_unlock(&tcm_hcd->pm_mutex);
 			} else if (*transition == FB_BLANK_UNBLANK) {
-
+				//LOGV("FB_EARLY_EVENT_BLANK and FB_BLANK_UNBLANK\n");
 			}
 		} else if (action == FB_EVENT_BLANK) {
 			if (*transition == FB_BLANK_POWERDOWN) {
@@ -3204,7 +3205,7 @@ static void do_syna_reset_work(struct work_struct *work)
 	if(tcm_hcd->reseting) return;
 	tcm_hcd->reseting = true;
 	LOGV("ERROR: TouchPad Interrupt Abnormal! Next : Reset TP IC!\n");
-	retval = tcm_hcd->reset(tcm_hcd, true, false);
+	retval = tcm_hcd->reset(tcm_hcd, true, false);//reset ic by hardware
 	if (retval < 0) {
 		LOGV("ERROR : RESET TP IC FAILED!\n");
 		tcm_hcd->enable_irq(tcm_hcd, false, true);
@@ -3248,13 +3249,13 @@ static int lct_tp_work_node_callback(bool flag)
 	}
 	if (tcm_hcd->in_suspend) return 0;
 	mutex_lock(&tcm_hcd->pm_mutex);
-	if (flag) {
+	if (flag) { // enable(resume) tp
 		tcm_hcd->in_suspend = true;
 		retval = tcm_hcd->reset(tcm_hcd, false, true);
-		if (retval < 0) LOGE(tcm_hcd->pdev->dev.parent, "Failed to do reset\n");
+		if (retval < 0) LOGE(tcm_hcd->pdev->dev.parent,"Failed to do reset\n");
 		retval = syna_tcm_resume(&(tcm_hcd->pdev->dev));
 		if (retval < 0) LOGV("syna_tcm_resume Failed! retval = %d\n", retval);
-	} else {
+	} else {// disbale(suspend) tp
 		flush_work(&g_resume_work);
 		retval = syna_tcm_early_suspend(&tcm_hcd->pdev->dev);
 		if (retval < 0) LOGV("syna_tcm_early_suspend Failed! retval = %d\n", retval);
@@ -3593,7 +3594,7 @@ static int syna_tcm_probe(struct platform_device *pdev)
 	}
 
 	LOGV("reset touchpad IC\n");
-	retval = tcm_hcd->reset(tcm_hcd, false, false);
+	retval = tcm_hcd->reset(tcm_hcd, false, false);//reset ic by i2c command
 	if (retval < 0) {
 		LOGE(tcm_hcd->pdev->dev.parent,
 				"Failed to do reset\n");
@@ -3850,7 +3851,7 @@ static int lct_syna_set_gpio(int gpio, bool config)
 int lct_syna_check_lcd(void)
 {
 	int retval;
-	int lcm_id0, lcm_id1;
+	int lcm_id0,lcm_id1;
 	retval = lct_syna_set_gpio(F7A_LCM_ID0, true);
 	if (retval < 0) {
 		LOGV("Failed to configure LCM_ID0 GPIO\n");
@@ -3881,7 +3882,7 @@ err_lcm_id0:
 }
 /* add check F7A_LCM_ID by wanghan end */
 
-
+//doesn't support charging in shutdown mode
 #define DOES_NOT_SUPPORT_SHUTDOWN_CHARGING
 
 #ifdef DOES_NOT_SUPPORT_SHUTDOWN_CHARGING
@@ -3900,7 +3901,7 @@ static int __init syna_tcm_module_init(void)
 		goto err;
 	}
 #endif
-
+	//Check hardware
 	retval = lct_syna_check_lcd();
 	if(retval < 0){
 		LOGV("Verify BOE LCM ID Failed, not BOE TP!\n");
@@ -3911,7 +3912,7 @@ static int __init syna_tcm_module_init(void)
 		LOGV("g_lcd_id is ERROR!\n");
 		goto err;
 	} else {
-		if (strstr(g_lcd_id, "boe td4320") != NULL) {
+		if (strstr(g_lcd_id,"boe td4320") != NULL) {
 			LOGV("TP info: [Vendor]BOE [IC] td4320\n");
 		} else {
 			LOGV("Touch IC is not td4320!\n");
@@ -3919,7 +3920,7 @@ static int __init syna_tcm_module_init(void)
 		}
 	}
 
-
+	//Init touch
 	retval = syna_tcm_bus_init();
 	if (retval < 0){
 		LOGV("syna_tcm_bus_init Failed, retval=%d\n", retval);
